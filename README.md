@@ -1,0 +1,1 @@
+Replace src/services/firebase.js config with your Firebase Web config. Then `npm install` and `npm start` from frontend folder.
