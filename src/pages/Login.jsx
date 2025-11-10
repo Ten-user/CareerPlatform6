@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -19,37 +19,31 @@ export default function Login() {
     try {
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
+      // Check if email is verified
       if (!res.user.emailVerified) {
-        setErr('Email not verified. Check your inbox.');
-        await res.user.sendEmailVerification();
+        await sendEmailVerification(res.user);
+        setErr('Email not verified. Verification email sent. Please check your inbox.');
+        setLoading(false);
         return;
       }
 
-      const snap = await getDoc(doc(db, 'users', res.user.uid));
-      if (!snap.exists()) {
+      const uid = res.user.uid;
+      const snap = await getDoc(doc(db, 'users', uid));
+
+      if (snap.exists()) {
+        const user = snap.data();
+        switch (user.role) {
+          case 'student': nav('/dashboard'); break;
+          case 'institute': nav('/institute'); break;
+          case 'company': nav('/company'); break;
+          case 'admin': nav('/admin'); break;
+          default: nav('/'); 
+        }
+      } else {
         setErr('No user profile found in database.');
-        return;
       }
-
-      const user = snap.data();
-      switch (user.role) {
-        case 'student':
-          nav('/dashboard'); break;
-        case 'institute':
-          nav('/institute'); break;
-        case 'company':
-          nav('/company'); break;
-        case 'admin':
-          nav('/admin'); break;
-        default:
-          nav('/'); break;
-      }
-    } catch (error) {
-      // Firebase auth error codes
-      if (error.code === 'auth/user-not-found') setErr('No account found for this email.');
-      else if (error.code === 'auth/wrong-password') setErr('Incorrect password.');
-      else if (error.code === 'auth/invalid-email') setErr('Invalid email format.');
-      else setErr(error.message || 'Login failed.');
+    } catch (err) {
+      setErr('Invalid email or password.');
     } finally {
       setLoading(false);
     }
@@ -57,7 +51,7 @@ export default function Login() {
 
   return (
     <>
-      {/* NAVBAR */}
+      {/* HEADER */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
