@@ -10,8 +10,8 @@ export default function Register() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('student');
   const [err, setErr] = useState('');
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const onNameChange = (e) => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''));
   const onEmailChange = (e) => setEmail(e.target.value.toLowerCase());
@@ -21,8 +21,7 @@ export default function Register() {
     e.preventDefault();
     setErr('');
     setSuccess('');
-    
-    // Validation
+
     if (!name || !/^[A-Za-z\s]+$/.test(name)) return setErr('Invalid name');
     if (!email || !isValidEmail(email)) return setErr('Invalid email');
     if (!pw || pw.length < 6) return setErr('Password must be at least 6 characters');
@@ -33,31 +32,25 @@ export default function Register() {
       // Create user in Firebase Auth
       const res = await createUserWithEmailAndPassword(auth, email, pw);
 
-      try {
-        // Save user data in Firestore
-        await setDoc(doc(db, 'users', res.user.uid), {
-          name,
-          email,
-          role,
-          createdAt: new Date()
-        });
+      // Save user data in Firestore
+      await setDoc(doc(db, 'users', res.user.uid), {
+        name,
+        email,
+        role,
+        createdAt: new Date()
+      });
 
-        setSuccess('Account created successfully! You can now log in.');
-        setEmail('');
-        setPw('');
-        setName('');
-        setRole('student');
+      setSuccess('Account created successfully! You can now log in.');
+      setEmail('');
+      setPw('');
+      setName('');
+      setRole('student');
 
-      } catch (fireErr) {
-        console.error(fireErr);
-        setErr('Account created but failed to save user profile. Try logging in.');
-      }
-
-    } catch (authErr) {
-      console.error(authErr);
-      if (authErr.code === 'auth/email-already-in-use') setErr('Email already registered');
-      else if (authErr.code === 'auth/invalid-email') setErr('Invalid email format');
-      else setErr(authErr.message || 'Registration failed');
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
+      else if (error.code === 'auth/invalid-email') setErr('Invalid email format');
+      else setErr(error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -65,7 +58,6 @@ export default function Register() {
 
   return (
     <>
-      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -75,7 +67,6 @@ export default function Register() {
         </div>
       </nav>
 
-      {/* REGISTER FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Register</h2>
@@ -112,7 +103,6 @@ export default function Register() {
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
