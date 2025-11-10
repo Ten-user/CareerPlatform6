@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,17 +17,44 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Sign in the user
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
-      console.log('Logged in:', res.user.uid, res.user.email);
 
-      // Redirect to dashboard (or change for role-based pages later)
-      nav('/dashboard');
+      // Fetch user profile from Firestore
+      const userDoc = await getDoc(doc(db, 'users', res.user.uid));
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+
+        // Redirect based on role
+        switch (userData.role) {
+          case 'student':
+            nav('/dashboard');
+            break;
+          case 'institute':
+            nav('/institute');
+            break;
+          case 'company':
+            nav('/company');
+            break;
+          case 'admin':
+            nav('/admin');
+            break;
+          default:
+            nav('/dashboard');
+        }
+      } else {
+        setErr('Profile not found. Please contact support.');
+      }
 
     } catch (error) {
       console.error(error);
+
+      // Handle errors
       if (error.code === 'auth/user-not-found') setErr('User not found');
       else if (error.code === 'auth/wrong-password') setErr('Incorrect password');
       else if (error.code === 'auth/invalid-email') setErr('Invalid email');
+      else if (error.message.includes('offline')) setErr('Cannot connect to server. Check your internet.');
       else setErr('Failed to login. Check your credentials.');
     } finally {
       setLoading(false);
