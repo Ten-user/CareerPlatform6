@@ -17,45 +17,32 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Sign in the user
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Fetch user profile from Firestore
-      const userDoc = await getDoc(doc(db, 'users', res.user.uid));
+      // Attempt to fetch Firestore user role
+      let role = 'student';
+      try {
+        const userDoc = await getDoc(doc(db, 'users', res.user.uid));
+        if (userDoc.exists()) role = userDoc.data().role || 'student';
+      } catch {
+        console.warn('Firestore fetch failed, using default role.');
+      }
 
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-
-        // Redirect based on role
-        switch (userData.role) {
-          case 'student':
-            nav('/dashboard');
-            break;
-          case 'institute':
-            nav('/institute');
-            break;
-          case 'company':
-            nav('/company');
-            break;
-          case 'admin':
-            nav('/admin');
-            break;
-          default:
-            nav('/dashboard');
-        }
-      } else {
-        setErr('Profile not found. Please contact support.');
+      // Redirect based on role
+      switch (role) {
+        case 'student': nav('/dashboard'); break;
+        case 'institute': nav('/institute'); break;
+        case 'company': nav('/company'); break;
+        case 'admin': nav('/admin'); break;
+        default: nav('/dashboard');
       }
 
     } catch (error) {
       console.error(error);
-
-      // Handle errors
       if (error.code === 'auth/user-not-found') setErr('User not found');
       else if (error.code === 'auth/wrong-password') setErr('Incorrect password');
       else if (error.code === 'auth/invalid-email') setErr('Invalid email');
-      else if (error.message.includes('offline')) setErr('Cannot connect to server. Check your internet.');
-      else setErr('Failed to login. Check your credentials.');
+      else setErr('Failed to login. Check your credentials or internet connection.');
     } finally {
       setLoading(false);
     }
@@ -63,7 +50,6 @@ export default function Login() {
 
   return (
     <>
-      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -73,7 +59,6 @@ export default function Login() {
         </div>
       </nav>
 
-      {/* LOGIN FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Welcome Back</h2>
@@ -81,22 +66,10 @@ export default function Login() {
 
           <form onSubmit={onSubmit}>
             <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value.toLowerCase())}
-              placeholder="example@gmail.com"
-              required
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())} placeholder="example@gmail.com" required />
 
             <label>Password</label>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder="Your password"
-              required
-            />
+            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Your password" required />
 
             {err && <div className="error-msg">{err}</div>}
 
@@ -111,7 +84,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
