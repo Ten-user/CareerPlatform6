@@ -40,19 +40,19 @@ export default function Register() {
       // Send email verification
       await sendEmailVerification(res.user);
 
-      alert(
-        'Account created! Verification email sent. Please check your inbox before logging in.'
-      );
+      // Stop loading before alert
+      setLoading(false);
 
-      // Redirect to login page after registration
+      // Inform user
+      alert('Account created! Verification email sent. Please check your inbox before logging in.');
+
+      // Redirect to login page
       window.location.href = '/login';
-
     } catch (error) {
+      setLoading(false);
       if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
       else if (error.code === 'auth/invalid-email') setErr('Invalid email format');
       else setErr(error.message || 'Registration failed');
-    } finally {
-      setLoading(false);
     }
   };
 
