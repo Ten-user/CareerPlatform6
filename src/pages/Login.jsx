@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth } from '../services/firebase';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,30 +18,16 @@ export default function Login() {
     try {
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Attempt to fetch Firestore user role
-      let role = 'student';
-      try {
-        const userDoc = await getDoc(doc(db, 'users', res.user.uid));
-        if (userDoc.exists()) role = userDoc.data().role || 'student';
-      } catch {
-        console.warn('Firestore fetch failed, using default role.');
-      }
-
-      // Redirect based on role
-      switch (role) {
-        case 'student': nav('/dashboard'); break;
-        case 'institute': nav('/institute'); break;
-        case 'company': nav('/company'); break;
-        case 'admin': nav('/admin'); break;
-        default: nav('/dashboard');
-      }
+      // Success — redirect immediately
+      console.log('Logged in:', res.user.uid, res.user.email);
+      nav('/dashboard'); // Change if you want role-based pages
 
     } catch (error) {
       console.error(error);
       if (error.code === 'auth/user-not-found') setErr('User not found');
       else if (error.code === 'auth/wrong-password') setErr('Incorrect password');
       else if (error.code === 'auth/invalid-email') setErr('Invalid email');
-      else setErr('Failed to login. Check your credentials or internet connection.');
+      else setErr('Failed to login. Check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -66,10 +51,22 @@ export default function Login() {
 
           <form onSubmit={onSubmit}>
             <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())} placeholder="example@gmail.com" required />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value.toLowerCase())}
+              placeholder="example@gmail.com"
+              required
+            />
 
             <label>Password</label>
-            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Your password" required />
+            <input
+              type="password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder="Your password"
+              required
+            />
 
             {err && <div className="error-msg">{err}</div>}
 
