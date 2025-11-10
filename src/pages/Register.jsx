@@ -1,54 +1,68 @@
-import React, { useState } from 'react'
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
-import { auth, db } from '../services/firebase'
-import { setDoc, doc } from 'firebase/firestore'
-import { useNavigate, Link } from 'react-router-dom'
+import React, { useState } from 'react';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { auth, db } from '../services/firebase';
+import { setDoc, doc } from 'firebase/firestore';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Register() {
-  const [email, setEmail] = useState('')
-  const [pw, setPw] = useState('')
-  const [name, setName] = useState('')
-  const [role, setRole] = useState('student')
-  const [err, setErr] = useState('')
-  const [loading, setLoading] = useState(false)
-  const nav = useNavigate()
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('student');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const nav = useNavigate();
 
-  const onNameChange = (e) => {
-    setName(e.target.value.replace(/[^A-Za-z\s]/g, ''))
-  }
-  const onEmailChange = (e) => setEmail(e.target.value.toLowerCase())
-  const isValidEmail = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)
+  const onNameChange = (e) => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''));
+  const onEmailChange = (e) => setEmail(e.target.value.toLowerCase());
+  const isValidEmail = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
 
   const onSubmit = async (e) => {
-    e.preventDefault()
-    setErr('')
-    if (!name || !/^[A-Za-z\s]+$/.test(name)) return setErr('Invalid name')
-    if (!email || !isValidEmail(email)) return setErr('Invalid email')
-    if (!pw || pw.length < 6) return setErr('Password min 6 chars')
+    e.preventDefault();
+    setErr('');
 
-    setLoading(true)
+    if (!name || !/^[A-Za-z\s]+$/.test(name)) return setErr('Invalid name');
+    if (!email || !isValidEmail(email)) return setErr('Invalid email');
+    if (!pw || pw.length < 6) return setErr('Password must be at least 6 characters');
+
+    setLoading(true);
+
     try {
-      const res = await createUserWithEmailAndPassword(auth, email, pw)
-      await setDoc(doc(db, 'users', res.user.uid), { name, email, role, createdAt: new Date() })
-      await sendEmailVerification(res.user)
+      const res = await createUserWithEmailAndPassword(auth, email, pw);
 
+      // Save user data to Firestore
+      await setDoc(doc(db, 'users', res.user.uid), {
+        name,
+        email,
+        role,
+        createdAt: new Date()
+      });
+
+      // Send email verification
+      await sendEmailVerification(res.user);
+      alert('Account created! Verification email sent. Check your inbox.');
+
+      // Redirect based on role
       switch (role) {
-        case 'student': nav('/dashboard'); break
-        case 'institute': nav('/institute'); break
-        case 'company': nav('/company'); break
-        case 'admin': nav('/admin'); break
-        default: nav('/')
+        case 'student': nav('/dashboard'); break;
+        case 'institute': nav('/institute'); break;
+        case 'company': nav('/company'); break;
+        case 'admin': nav('/admin'); break;
+        default: nav('/'); break;
       }
-    } catch (err) {
-      setErr(err?.message || 'Registration failed.')
+    } catch (error) {
+      // Better error messages
+      if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
+      else if (error.code === 'auth/invalid-email') setErr('Invalid email format');
+      else setErr(error.message || 'Registration failed');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <>
-      {/* INLINE HEADER */}
+      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -58,7 +72,7 @@ export default function Register() {
         </div>
       </nav>
 
-      {/* REGISTER CARD */}
+      {/* REGISTER FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Register</h2>
@@ -94,7 +108,9 @@ export default function Register() {
               <option value="company">Company</option>
               <option value="admin">Admin</option>
             </select>
+
             {err && <div className="error-msg">{err}</div>}
+
             <button className="btn-primary full-width" type="submit" disabled={loading}>
               {loading ? 'Creating account...' : 'Register'}
             </button>
@@ -105,7 +121,7 @@ export default function Register() {
         </div>
       </div>
 
-         {/* ==== FOOTER ==== */}
+      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
@@ -131,5 +147,5 @@ export default function Register() {
         </div>
       </footer>
     </>
-  )
+  );
 }
