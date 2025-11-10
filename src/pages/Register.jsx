@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useNavigate, Link } from 'react-router-dom';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { setDoc, doc } from 'firebase/firestore';
-import { Link } from 'react-router-dom';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -10,8 +10,8 @@ export default function Register() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('student');
   const [err, setErr] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const nav = useNavigate();
 
   const onNameChange = (e) => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''));
   const onEmailChange = (e) => setEmail(e.target.value.toLowerCase());
@@ -20,13 +20,24 @@ export default function Register() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr('');
-    setSuccess('');
-
-    if (!name || !/^[A-Za-z\s]+$/.test(name)) return setErr('Invalid name');
-    if (!email || !isValidEmail(email)) return setErr('Invalid email');
-    if (!pw || pw.length < 6) return setErr('Password must be at least 6 characters');
-
     setLoading(true);
+
+    // Validation
+    if (!name || !/^[A-Za-z\s]+$/.test(name)) {
+      setErr('Invalid name');
+      setLoading(false);
+      return;
+    }
+    if (!email || !isValidEmail(email)) {
+      setErr('Invalid email');
+      setLoading(false);
+      return;
+    }
+    if (!pw || pw.length < 6) {
+      setErr('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
 
     try {
       // Create user in Firebase Auth
@@ -40,11 +51,11 @@ export default function Register() {
         createdAt: new Date()
       });
 
-      setSuccess('Account created successfully! You can now log in.');
-      setEmail('');
-      setPw('');
-      setName('');
-      setRole('student');
+      // Auto-login after registration
+      await signInWithEmailAndPassword(auth, email, pw);
+
+      // Redirect to dashboard
+      nav('/dashboard');
 
     } catch (error) {
       console.error(error);
@@ -58,6 +69,7 @@ export default function Register() {
 
   return (
     <>
+      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -67,6 +79,7 @@ export default function Register() {
         </div>
       </nav>
 
+      {/* REGISTER FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Register</h2>
@@ -90,7 +103,6 @@ export default function Register() {
             </select>
 
             {err && <div className="error-msg">{err}</div>}
-            {success && <div className="success-msg">{success}</div>}
 
             <button className="btn-primary full-width" type="submit" disabled={loading}>
               {loading ? 'Processing...' : 'Register'}
@@ -103,6 +115,7 @@ export default function Register() {
         </div>
       </div>
 
+      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
