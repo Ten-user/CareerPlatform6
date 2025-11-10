@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,21 +17,45 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Sign in user
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Success — redirect based on UID/email or default
-      // Remove Firestore reads entirely to stop errors
-      console.log('Logged in:', res.user.uid, res.user.email);
+      // Get user profile from Firestore
+      const snap = await getDoc(doc(db, 'users', res.user.uid));
 
-      // Redirect to dashboard
-      nav('/dashboard'); // change if you want role-based pages
+      if (!snap.exists()) {
+        setErr('User profile not found. Contact support.');
+        setLoading(false);
+        return;
+      }
+
+      const user = snap.data();
+
+      // Navigate based on role
+      switch (user.role) {
+        case 'student':
+          nav('/dashboard');
+          break;
+        case 'institute':
+          nav('/institute');
+          break;
+        case 'company':
+          nav('/company');
+          break;
+        case 'admin':
+          nav('/admin');
+          break;
+        default:
+          nav('/');
+      }
 
     } catch (error) {
       console.error(error);
-      if (error.code === 'auth/user-not-found') setErr('User not found');
-      else if (error.code === 'auth/wrong-password') setErr('Incorrect password');
-      else if (error.code === 'auth/invalid-email') setErr('Invalid email');
-      else setErr('Failed to login. Check your credentials.');
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setErr('Invalid email or password.');
+      } else {
+        setErr('Login failed. Check your internet connection.');
+      }
     } finally {
       setLoading(false);
     }
@@ -38,6 +63,7 @@ export default function Login() {
 
   return (
     <>
+      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -47,6 +73,7 @@ export default function Login() {
         </div>
       </nav>
 
+      {/* LOGIN FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Welcome Back</h2>
@@ -83,6 +110,32 @@ export default function Login() {
           </p>
         </div>
       </div>
+
+      {/* FOOTER */}
+      <footer className="footer">
+        <div className="footer-columns">
+          <div>
+            <h3>Career<span>Connect</span></h3>
+            <p>Empowering growth through education and employment integration.</p>
+          </div>
+          <div>
+            <h4>Explore</h4>
+            <ul>
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/register">Register</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Contact</h4>
+            <p>Email: support@careerconnect.com</p>
+            <p>Phone: +266 555 12345</p>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <p>© {new Date().getFullYear()} CareerConnect. All rights reserved.</p>
+        </div>
+      </footer>
     </>
   );
 }
