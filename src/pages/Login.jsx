@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../services/firebase';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -17,45 +16,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Sign in user
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
+      console.log('Logged in:', res.user.uid, res.user.email);
 
-      // Get user profile from Firestore
-      const snap = await getDoc(doc(db, 'users', res.user.uid));
-
-      if (!snap.exists()) {
-        setErr('User profile not found. Contact support.');
-        setLoading(false);
-        return;
-      }
-
-      const user = snap.data();
-
-      // Navigate based on role
-      switch (user.role) {
-        case 'student':
-          nav('/dashboard');
-          break;
-        case 'institute':
-          nav('/institute');
-          break;
-        case 'company':
-          nav('/company');
-          break;
-        case 'admin':
-          nav('/admin');
-          break;
-        default:
-          nav('/');
-      }
+      // Redirect to dashboard (or change for role-based pages later)
+      nav('/dashboard');
 
     } catch (error) {
       console.error(error);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        setErr('Invalid email or password.');
-      } else {
-        setErr('Login failed. Check your internet connection.');
-      }
+      if (error.code === 'auth/user-not-found') setErr('User not found');
+      else if (error.code === 'auth/wrong-password') setErr('Incorrect password');
+      else if (error.code === 'auth/invalid-email') setErr('Invalid email');
+      else setErr('Failed to login. Check your credentials.');
     } finally {
       setLoading(false);
     }
