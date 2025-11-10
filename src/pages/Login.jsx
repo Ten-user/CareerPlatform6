@@ -9,20 +9,34 @@ export default function Login() {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
   const nav = useNavigate();
+
+  const handleResend = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await sendEmailVerification(user);
+        alert('Verification email resent! Check your inbox.');
+        setShowResend(false);
+      }
+    } catch (error) {
+      setErr('Failed to resend verification email.');
+    }
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr('');
+    setShowResend(false);
     setLoading(true);
 
     try {
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Check if email is verified
       if (!res.user.emailVerified) {
-        await sendEmailVerification(res.user);
-        setErr('Email not verified. Verification email sent. Please check your inbox.');
+        setErr('Email not verified. Please check your inbox.');
+        setShowResend(true);
         setLoading(false);
         return;
       }
@@ -42,7 +56,7 @@ export default function Login() {
       } else {
         setErr('No user profile found in database.');
       }
-    } catch (err) {
+    } catch (error) {
       setErr('Invalid email or password.');
     } finally {
       setLoading(false);
@@ -87,6 +101,15 @@ export default function Login() {
             />
 
             {err && <div className="error-msg">{err}</div>}
+            {showResend && (
+              <button
+                type="button"
+                className="btn-secondary full-width"
+                onClick={handleResend}
+              >
+                Resend verification email
+              </button>
+            )}
 
             <button className="btn-primary full-width" type="submit" disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
