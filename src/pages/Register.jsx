@@ -18,30 +18,22 @@ export default function Register() {
     setErr('');
     setLoading(true);
 
-    if (!name || !/^[A-Za-z\s]+$/.test(name)) {
-      setErr('Invalid name'); setLoading(false); return;
-    }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErr('Invalid email'); setLoading(false); return;
-    }
-    if (!pw || pw.length < 6) {
-      setErr('Password must be at least 6 characters'); setLoading(false); return;
-    }
+    // Validation
+    if (!name || !/^[A-Za-z\s]+$/.test(name)) { setErr('Invalid name'); setLoading(false); return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr('Invalid email'); setLoading(false); return; }
+    if (!pw || pw.length < 6) { setErr('Password must be at least 6 characters'); setLoading(false); return; }
 
     try {
+      // 1️⃣ Create user in Firebase Auth
       const res = await createUserWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Save user to Firestore
-      try {
-        await setDoc(doc(db, 'users', res.user.uid), {
-          name, email, role, createdAt: new Date()
-        });
-      } catch {
-        console.warn('User created but Firestore failed.');
-      }
-
-      setLoading(false);
+      // 2️⃣ Immediately redirect to login
       navigate('/login');
+
+      // 3️⃣ Firestore write happens async in background; if it fails, just log
+      setDoc(doc(db, 'users', res.user.uid), {
+        name, email, role, createdAt: new Date()
+      }).catch((fireErr) => console.warn('Firestore save failed', fireErr));
 
     } catch (error) {
       console.error(error);
