@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDocFromServer } from 'firebase/firestore';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -17,34 +17,40 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Sign in
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Fetch user profile from Firestore
-      const snap = await getDoc(doc(db, 'users', res.user.uid));
-      setLoading(false);
+      const uid = res.user.uid;
+      let snap;
 
-      if (snap.exists()) {
-        const user = snap.data();
-        switch (user.role) {
-          case 'student': nav('/dashboard'); break;
-          case 'institute': nav('/institute'); break;
-          case 'company': nav('/company'); break;
-          case 'admin': nav('/admin'); break;
-          default: nav('/'); 
-        }
-      } else {
+      try {
+        snap = await getDocFromServer(doc(db, 'users', uid));
+      } catch (fetchErr) {
+        console.error(fetchErr);
+        setErr('Cannot fetch user profile. Check your internet connection.');
+        setLoading(false);
+        return;
+      }
+
+      if (!snap.exists()) {
         setErr('No user profile found in database.');
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+
+      const user = snap.data();
+      switch (user.role) {
+        case 'student': nav('/dashboard'); break;
+        case 'institute': nav('/institute'); break;
+        case 'company': nav('/company'); break;
+        case 'admin': nav('/admin'); break;
+        default: nav('/'); 
+      }
+
+    } catch (loginErr) {
+      console.error(loginErr);
+      setErr('Invalid email or password.');
+    } finally {
       setLoading(false);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        setErr('Invalid email or password.');
-      } else if (error.code === 'auth/invalid-email') {
-        setErr('Invalid email format.');
-      } else {
-        setErr(error.message || 'Login failed.');
-      }
     }
   };
 
@@ -95,31 +101,6 @@ export default function Login() {
           </p>
         </div>
       </div>
-
-      <footer className="footer">
-        <div className="footer-columns">
-          <div>
-            <h3>Career<span>Connect</span></h3>
-            <p>Empowering growth through education and employment integration.</p>
-          </div>
-          <div>
-            <h4>Explore</h4>
-            <ul>
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/login">Login</Link></li>
-              <li><Link to="/register">Register</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4>Contact</h4>
-            <p>Email: support@careerconnect.com</p>
-            <p>Phone: +266 555 12345</p>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} CareerConnect. All rights reserved.</p>
-        </div>
-      </footer>
     </>
   );
 }
