@@ -27,9 +27,10 @@ export default function Register() {
     setLoading(true);
 
     try {
+      // Create account
       const res = await createUserWithEmailAndPassword(auth, email, pw);
 
-      // Save user data to Firestore
+      // Save user to Firestore
       await setDoc(doc(db, 'users', res.user.uid), {
         name,
         email,
@@ -37,10 +38,10 @@ export default function Register() {
         createdAt: new Date()
       });
 
-      // Stop loading
+      // Stop loading immediately after creation
       setLoading(false);
 
-      // Redirect to login page
+      // Show feedback
       alert('Account created successfully! You can now log in.');
       window.location.href = '/login';
 
@@ -54,7 +55,6 @@ export default function Register() {
 
   return (
     <>
-      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -64,35 +64,17 @@ export default function Register() {
         </div>
       </nav>
 
-      {/* REGISTER FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Register</h2>
           <p className="muted">Join CareerConnect and take your next step.</p>
           <form onSubmit={onSubmit}>
             <label>Full Name</label>
-            <input
-              value={name}
-              onChange={onNameChange}
-              placeholder="Name"
-              required
-            />
+            <input value={name} onChange={onNameChange} placeholder="Name" required />
             <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={onEmailChange}
-              placeholder="Email"
-              required
-            />
+            <input type="email" value={email} onChange={onEmailChange} placeholder="Email" required />
             <label>Password</label>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder="Minimum 6 characters"
-              required
-            />
+            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Minimum 6 characters" required />
             <label>Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="student">Student</option>
@@ -113,7 +95,6 @@ export default function Register() {
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
