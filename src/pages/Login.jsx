@@ -17,25 +17,44 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Sign in user
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      const uid = res.user.uid;
-      const snap = await getDoc(doc(db, 'users', uid));
+      // Fetch Firestore user profile
+      const snap = await getDoc(doc(db, 'users', res.user.uid));
 
-      if (snap.exists()) {
-        const user = snap.data();
-        switch (user.role) {
-          case 'student': nav('/dashboard'); break;
-          case 'institute': nav('/institute'); break;
-          case 'company': nav('/company'); break;
-          case 'admin': nav('/admin'); break;
-          default: nav('/'); 
-        }
-      } else {
-        setErr('No user profile found in database.');
+      if (!snap.exists()) {
+        setErr('User profile not found in database.');
+        setLoading(false);
+        return;
       }
+
+      const user = snap.data();
+
+      // Navigate based on role
+      switch (user.role) {
+        case 'student':
+          nav('/dashboard');
+          break;
+        case 'institute':
+          nav('/institute');
+          break;
+        case 'company':
+          nav('/company');
+          break;
+        case 'admin':
+          nav('/admin');
+          break;
+        default:
+          nav('/');
+      }
+
     } catch (error) {
-      setErr('Invalid email or password.');
+      console.log(error); // <-- See real Firebase error in console
+      if (error.code === 'auth/user-not-found') setErr('User not found.');
+      else if (error.code === 'auth/wrong-password') setErr('Incorrect password.');
+      else if (error.code === 'auth/invalid-email') setErr('Invalid email format.');
+      else setErr('Failed to login. Check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -43,7 +62,6 @@ export default function Login() {
 
   return (
     <>
-      {/* HEADER */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -53,7 +71,6 @@ export default function Login() {
         </div>
       </nav>
 
-      {/* LOGIN FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Welcome Back</h2>
@@ -91,7 +108,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
