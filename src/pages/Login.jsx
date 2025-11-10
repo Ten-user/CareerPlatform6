@@ -17,46 +17,34 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Sign in user
+      // Sign in
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Fetch Firestore user profile
+      // Fetch user profile from Firestore
       const snap = await getDoc(doc(db, 'users', res.user.uid));
-
-      if (!snap.exists()) {
-        setErr('User profile not found in database.');
-        setLoading(false);
-        return;
-      }
-
-      const user = snap.data();
-
-      // Navigate based on role
-      switch (user.role) {
-        case 'student':
-          nav('/dashboard');
-          break;
-        case 'institute':
-          nav('/institute');
-          break;
-        case 'company':
-          nav('/company');
-          break;
-        case 'admin':
-          nav('/admin');
-          break;
-        default:
-          nav('/');
-      }
-
-    } catch (error) {
-      console.log(error); // <-- See real Firebase error in console
-      if (error.code === 'auth/user-not-found') setErr('User not found.');
-      else if (error.code === 'auth/wrong-password') setErr('Incorrect password.');
-      else if (error.code === 'auth/invalid-email') setErr('Invalid email format.');
-      else setErr('Failed to login. Check your credentials.');
-    } finally {
       setLoading(false);
+
+      if (snap.exists()) {
+        const user = snap.data();
+        switch (user.role) {
+          case 'student': nav('/dashboard'); break;
+          case 'institute': nav('/institute'); break;
+          case 'company': nav('/company'); break;
+          case 'admin': nav('/admin'); break;
+          default: nav('/'); 
+        }
+      } else {
+        setErr('No user profile found in database.');
+      }
+    } catch (error) {
+      setLoading(false);
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setErr('Invalid email or password.');
+      } else if (error.code === 'auth/invalid-email') {
+        setErr('Invalid email format.');
+      } else {
+        setErr(error.message || 'Login failed.');
+      }
     }
   };
 
