@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { setDoc, doc } from 'firebase/firestore';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -11,7 +11,6 @@ export default function Register() {
   const [role, setRole] = useState('student');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-  const nav = useNavigate();
 
   const onNameChange = (e) => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''));
   const onEmailChange = (e) => setEmail(e.target.value.toLowerCase());
@@ -40,18 +39,15 @@ export default function Register() {
 
       // Send email verification
       await sendEmailVerification(res.user);
-      alert('Account created! Verification email sent. Check your inbox.');
 
-      // Redirect based on role
-      switch (role) {
-        case 'student': nav('/dashboard'); break;
-        case 'institute': nav('/institute'); break;
-        case 'company': nav('/company'); break;
-        case 'admin': nav('/admin'); break;
-        default: nav('/'); break;
-      }
+      alert(
+        'Account created! Verification email sent. Please check your inbox before logging in.'
+      );
+
+      // Redirect to login page after registration
+      window.location.href = '/login';
+
     } catch (error) {
-      // Better error messages
       if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
       else if (error.code === 'auth/invalid-email') setErr('Invalid email format');
       else setErr(error.message || 'Registration failed');
