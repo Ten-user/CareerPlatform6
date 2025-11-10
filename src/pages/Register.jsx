@@ -11,6 +11,7 @@ export default function Register() {
   const [role, setRole] = useState('student');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
 
   const onNameChange = (e) => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''));
   const onEmailChange = (e) => setEmail(e.target.value.toLowerCase());
@@ -19,7 +20,9 @@ export default function Register() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr('');
-
+    setSuccess('');
+    
+    // Validation
     if (!name || !/^[A-Za-z\s]+$/.test(name)) return setErr('Invalid name');
     if (!email || !isValidEmail(email)) return setErr('Invalid email');
     if (!pw || pw.length < 6) return setErr('Password must be at least 6 characters');
@@ -27,34 +30,42 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // Create account
+      // Create user in Firebase Auth
       const res = await createUserWithEmailAndPassword(auth, email, pw);
 
-      // Save user to Firestore
-      await setDoc(doc(db, 'users', res.user.uid), {
-        name,
-        email,
-        role,
-        createdAt: new Date()
-      });
+      try {
+        // Save user data in Firestore
+        await setDoc(doc(db, 'users', res.user.uid), {
+          name,
+          email,
+          role,
+          createdAt: new Date()
+        });
 
-      // Stop loading immediately after creation
+        setSuccess('Account created successfully! You can now log in.');
+        setEmail('');
+        setPw('');
+        setName('');
+        setRole('student');
+
+      } catch (fireErr) {
+        console.error(fireErr);
+        setErr('Account created but failed to save user profile. Try logging in.');
+      }
+
+    } catch (authErr) {
+      console.error(authErr);
+      if (authErr.code === 'auth/email-already-in-use') setErr('Email already registered');
+      else if (authErr.code === 'auth/invalid-email') setErr('Invalid email format');
+      else setErr(authErr.message || 'Registration failed');
+    } finally {
       setLoading(false);
-
-      // Show feedback
-      alert('Account created successfully! You can now log in.');
-      window.location.href = '/login';
-
-    } catch (error) {
-      setLoading(false);
-      if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
-      else if (error.code === 'auth/invalid-email') setErr('Invalid email format');
-      else setErr(error.message || 'Registration failed');
     }
   };
 
   return (
     <>
+      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -64,6 +75,7 @@ export default function Register() {
         </div>
       </nav>
 
+      {/* REGISTER FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Register</h2>
@@ -71,10 +83,13 @@ export default function Register() {
           <form onSubmit={onSubmit}>
             <label>Full Name</label>
             <input value={name} onChange={onNameChange} placeholder="Name" required />
+
             <label>Email</label>
             <input type="email" value={email} onChange={onEmailChange} placeholder="Email" required />
+
             <label>Password</label>
             <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Minimum 6 characters" required />
+
             <label>Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="student">Student</option>
@@ -84,17 +99,20 @@ export default function Register() {
             </select>
 
             {err && <div className="error-msg">{err}</div>}
+            {success && <div className="success-msg">{success}</div>}
 
             <button className="btn-primary full-width" type="submit" disabled={loading}>
-              {loading ? 'Creating account...' : 'Register'}
+              {loading ? 'Processing...' : 'Register'}
             </button>
           </form>
+
           <p className="muted" style={{ marginTop: 16 }}>
             Already have an account? <Link to="/login" className="link-accent">Login here</Link>
           </p>
         </div>
       </div>
 
+      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
