@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../services/firebase';
-import { doc, getDocFromServer } from 'firebase/firestore';
+import { auth } from '../services/firebase';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,36 +18,19 @@ export default function Login() {
     try {
       const res = await signInWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      const uid = res.user.uid;
-      let snap;
+      // Success — redirect based on UID/email or default
+      // Remove Firestore reads entirely to stop errors
+      console.log('Logged in:', res.user.uid, res.user.email);
 
-      try {
-        snap = await getDocFromServer(doc(db, 'users', uid));
-      } catch (fetchErr) {
-        console.error(fetchErr);
-        setErr('Cannot fetch user profile. Check your internet connection.');
-        setLoading(false);
-        return;
-      }
+      // Redirect to dashboard
+      nav('/dashboard'); // change if you want role-based pages
 
-      if (!snap.exists()) {
-        setErr('No user profile found in database.');
-        setLoading(false);
-        return;
-      }
-
-      const user = snap.data();
-      switch (user.role) {
-        case 'student': nav('/dashboard'); break;
-        case 'institute': nav('/institute'); break;
-        case 'company': nav('/company'); break;
-        case 'admin': nav('/admin'); break;
-        default: nav('/'); 
-      }
-
-    } catch (loginErr) {
-      console.error(loginErr);
-      setErr('Invalid email or password.');
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'auth/user-not-found') setErr('User not found');
+      else if (error.code === 'auth/wrong-password') setErr('Incorrect password');
+      else if (error.code === 'auth/invalid-email') setErr('Invalid email');
+      else setErr('Failed to login. Check your credentials.');
     } finally {
       setLoading(false);
     }
