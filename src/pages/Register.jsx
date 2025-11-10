@@ -11,61 +11,49 @@ export default function Register() {
   const [role, setRole] = useState('student');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
-
-  const onNameChange = (e) => setName(e.target.value.replace(/[^A-Za-z\s]/g, ''));
-  const onEmailChange = (e) => setEmail(e.target.value.toLowerCase());
-  const isValidEmail = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setErr('');
-    setSuccess('');
-
-    // Validation
-    if (!name || !/^[A-Za-z\s]+$/.test(name)) return setErr('Invalid name');
-    if (!email || !isValidEmail(email)) return setErr('Invalid email');
-    if (!pw || pw.length < 6) return setErr('Password must be at least 6 characters');
-
     setLoading(true);
 
+    if (!name || !/^[A-Za-z\s]+$/.test(name)) {
+      setErr('Invalid name'); setLoading(false); return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErr('Invalid email'); setLoading(false); return;
+    }
+    if (!pw || pw.length < 6) {
+      setErr('Password must be at least 6 characters'); setLoading(false); return;
+    }
+
     try {
-      // Create user
-      const res = await createUserWithEmailAndPassword(auth, email, pw);
+      const res = await createUserWithEmailAndPassword(auth, email.toLowerCase(), pw);
 
-      // Save user data in Firestore
-      await setDoc(doc(db, 'users', res.user.uid), {
-        name,
-        email,
-        role,
-        createdAt: new Date()
-      });
+      // Save user to Firestore
+      try {
+        await setDoc(doc(db, 'users', res.user.uid), {
+          name, email, role, createdAt: new Date()
+        });
+      } catch {
+        console.warn('User created but Firestore failed.');
+      }
 
-      setSuccess('Account created successfully! Redirecting to login...');
-      setEmail('');
-      setPw('');
-      setName('');
-      setRole('student');
-
-      // Stop loading and redirect after short delay
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500); // 1.5 seconds
+      setLoading(false);
+      navigate('/login');
 
     } catch (error) {
       console.error(error);
       if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
-      else if (error.code === 'auth/invalid-email') setErr('Invalid email format');
-      else setErr(error.message || 'Registration failed');
-    } finally {
+      else if (error.code === 'auth/invalid-email') setErr('Invalid email');
+      else setErr('Registration failed. Check credentials.');
       setLoading(false);
     }
   };
 
   return (
     <>
-      {/* NAVBAR */}
       <nav className="navbar">
         <div className="logo">Career<span>Connect</span></div>
         <div className="nav-links">
@@ -75,17 +63,17 @@ export default function Register() {
         </div>
       </nav>
 
-      {/* REGISTER FORM */}
       <div className="auth-wrapper" style={{ paddingTop: '120px' }}>
         <div className="auth-card fade-in">
           <h2>Register</h2>
-          <p className="muted">Join CareerConnect and take your next step.</p>
+          <p className="muted">Join CareerConnect</p>
+
           <form onSubmit={onSubmit}>
             <label>Full Name</label>
-            <input value={name} onChange={onNameChange} placeholder="Name" required />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" required />
 
             <label>Email</label>
-            <input type="email" value={email} onChange={onEmailChange} placeholder="Email" required />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
 
             <label>Password</label>
             <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Minimum 6 characters" required />
@@ -99,7 +87,6 @@ export default function Register() {
             </select>
 
             {err && <div className="error-msg">{err}</div>}
-            {success && <div className="success-msg">{success}</div>}
 
             <button className="btn-primary full-width" type="submit" disabled={loading}>
               {loading ? 'Processing...' : 'Register'}
@@ -112,7 +99,6 @@ export default function Register() {
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-columns">
           <div>
