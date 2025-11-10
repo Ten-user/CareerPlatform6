@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
@@ -37,17 +37,13 @@ export default function Register() {
         createdAt: new Date()
       });
 
-      // Send email verification
-      await sendEmailVerification(res.user);
-
-      // Stop loading before alert
+      // Stop loading
       setLoading(false);
 
-      // Inform user
-      alert('Account created! Verification email sent. Please check your inbox before logging in.');
-
       // Redirect to login page
+      alert('Account created successfully! You can now log in.');
       window.location.href = '/login';
+
     } catch (error) {
       setLoading(false);
       if (error.code === 'auth/email-already-in-use') setErr('Email already registered');
