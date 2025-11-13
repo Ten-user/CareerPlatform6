@@ -22,7 +22,7 @@ export default function Dashboard() {
     const cSnap = await getDocs(collection(db, 'courses'))
     const jSnap = await getDocs(collection(db, 'jobs'))
     setCourses(cSnap.docs.map((d) => ({ id: d.id, ...d.data() })))
-    setJobs(jSnap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    setJobs(jSnap.docs.map((d) => ({ id: j.id, ...j.data() })))
   }
 
   useEffect(() => { loadData() }, [])
@@ -71,7 +71,7 @@ export default function Dashboard() {
       <div className="dashboard-wrapper fade-in" style={{ paddingTop: '120px' }}>
         {/* ==== UPLOAD TRANSCRIPT ==== */}
         <section className="upload-section card">
-          <h3>📁 Upload Transcript</h3>
+          <h3>Upload Transcript</h3>
           <p className="muted">Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
           <form onSubmit={uploadTranscript}>
             <input type="file" onChange={onFileChange} accept=".pdf,.doc,.docx,.jpg,.png" />
@@ -84,7 +84,7 @@ export default function Dashboard() {
         {/* ==== COURSES AND JOBS ==== */}
         <section className="dash-grid">
           <div className="dash-card">
-            <h3>🎓 Available Courses</h3>
+            <h3>Available Courses</h3>
             {courses.length === 0 && <p className="muted">No courses yet.</p>}
             <ul>
               {courses.map((c) => (
@@ -97,7 +97,7 @@ export default function Dashboard() {
           </div>
 
           <div className="dash-card">
-            <h3>💼 Available Jobs</h3>
+            <h3>Available Jobs</h3>
             {jobs.length === 0 && <p className="muted">No jobs yet.</p>}
             <ul>
               {jobs.map((j) => (
