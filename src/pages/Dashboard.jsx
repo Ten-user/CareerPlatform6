@@ -1,8 +1,7 @@
 // src/pages/Dashboard.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { getAuth, signOut } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
-import { mockDB } from '../services/mockDatabase';
 
 export default function Dashboard({ currentUser }) {
   const auth = getAuth();
@@ -36,101 +35,40 @@ export default function Dashboard({ currentUser }) {
     nav('/login');
   };
 
-  useEffect(() => {
-    if (currentUser?.email) {
-      try {
-        const studentApps = mockDB.getStudentApplications(currentUser.email) || [];
-        const studentDocs = mockDB.getStudentDocuments(currentUser.email) || [];
-        const allCourses = mockDB.getAllCourses() || [];
-
-        setApplications(studentApps);
-        setDocuments(studentDocs);
-        setCourses(allCourses);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setApplications([]);
-        setDocuments([]);
-        setCourses([]);
-      }
+  const saveProfile = () => {
+    if (!profile.fullName || !profile.phone) {
+      alert('Please fill in full name and phone.');
+      return;
     }
-  }, [currentUser]);
+    alert('Profile saved!');
+  };
 
-  const hasRequiredDocuments = () => {
-    const requiredDocTypes = ['transcript', 'certificate', 'id'];
-    return requiredDocTypes.every(type =>
-      documents.some(doc => doc.type === type && doc.uploaded)
-    );
+  const handleDocumentUpload = (docType, file) => {
+    if (!file) return;
+    const newDocument = {
+      type: docType,
+      name: file.name,
+      uploaded: true,
+      required: documentTypes.find(d => d.id === docType)?.required || false
+    };
+    setDocuments([...documents, newDocument]);
+    alert(`${docType.toUpperCase()} uploaded!`);
   };
 
   const applyToCourse = (course) => {
-    if (!currentUser?.email) return alert('Please login to apply');
     if (!profile.fullName) {
       alert('Complete profile first');
       setActiveTab('profile');
       return;
     }
-
-    const requiredDocTypes = ['transcript', 'certificate', 'id'];
-    const hasAllRequired = requiredDocTypes.every(type =>
-      documents.some(doc => doc.type === type && doc.uploaded)
-    );
-    if (!hasAllRequired) {
-      alert('Upload all required documents first');
-      setActiveTab('documents');
-      return;
-    }
-
-    const institutionApplications = applications.filter(app => app.institution === course.institution);
-    if (institutionApplications.length >= 2) {
-      alert(`Max 2 applications per institution (${course.institution})`);
-      return;
-    }
-
-    if (applications.find(app => app.courseId === course.id)) {
-      alert('Already applied to this course.');
-      return;
-    }
-
-    const applicationData = {
-      studentId: currentUser.email,
-      student: profile.fullName,
-      studentEmail: currentUser.email,
-      courseId: course.id,
-      course: course.name,
-      institution: course.institution,
-      faculty: course.faculty
-    };
-
-    const newApplication = mockDB.applyToCourse(applicationData);
-    setApplications([...applications, newApplication]);
     alert(`Applied to ${course.name} at ${course.institution}`);
-  };
-
-  const handleDocumentUpload = (docType, file) => {
-    if (!file || !currentUser?.email) return;
-    const documentData = {
-      studentEmail: currentUser.email,
-      type: docType,
-      name: file.name,
-      size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-      uploaded: true,
-      required: ['transcript', 'certificate', 'id'].includes(docType)
-    };
-    const newDocument = mockDB.uploadDocument(documentData);
-    setDocuments([...documents, newDocument]);
-    alert(`${docType.toUpperCase()} uploaded!`);
-  };
-
-  const saveProfile = () => {
-    if (!profile.fullName || !profile.phone) return alert('Fill full name and phone');
-    alert('Profile saved!');
   };
 
   return (
     <>
       {/* HEADER */}
       <nav className="navbar">
-        <div className="logo">Career<span>Connect</span></div>
+        <div className="logo">CareerConnect</div>
         <div className="nav-links">
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/">Home</Link>
@@ -151,7 +89,7 @@ export default function Dashboard({ currentUser }) {
       <main className="dashboard-content">
         {activeTab === 'profile' && (
           <div className="tab-content">
-            <h2>📝 Profile</h2>
+            <h2>Profile</h2>
             <input type="text" placeholder="Full Name" value={profile.fullName} onChange={e => setProfile({ ...profile, fullName: e.target.value })} />
             <input type="text" placeholder="Phone" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
             <input type="text" placeholder="Address" value={profile.address} onChange={e => setProfile({ ...profile, address: e.target.value })} />
@@ -164,12 +102,12 @@ export default function Dashboard({ currentUser }) {
 
         {activeTab === 'documents' && (
           <div className="tab-content">
-            <h2>📁 Documents</h2>
+            <h2>Documents</h2>
             {documentTypes.map(doc => (
               <div key={doc.id}>
                 <label>{doc.name} {doc.required && '*'}</label>
                 <input type="file" onChange={e => handleDocumentUpload(doc.id, e.target.files[0])} />
-                <span>{documents.find(d => d.type === doc.id)?.uploaded ? '✅ Uploaded' : '❌ Not uploaded'}</span>
+                <span>{documents.find(d => d.type === doc.id)?.uploaded ? 'Uploaded' : 'Not uploaded'}</span>
               </div>
             ))}
           </div>
@@ -177,7 +115,8 @@ export default function Dashboard({ currentUser }) {
 
         {activeTab === 'courses' && (
           <div className="tab-content">
-            <h2>📚 Courses ({courses.length})</h2>
+            <h2>Courses</h2>
+            {courses.length === 0 && <p>No courses available</p>}
             {courses.map(course => (
               <div key={course.id} className="course-card">
                 <h3>{course.name}</h3>
@@ -190,7 +129,8 @@ export default function Dashboard({ currentUser }) {
 
         {activeTab === 'applications' && (
           <div className="tab-content">
-            <h2>📄 Applications ({applications.length})</h2>
+            <h2>Applications</h2>
+            {applications.length === 0 && <p>No applications yet</p>}
             {applications.map((app, idx) => (
               <div key={idx} className="application-card">
                 <p>{app.course} @ {app.institution}</p>
@@ -201,7 +141,7 @@ export default function Dashboard({ currentUser }) {
 
         {activeTab === 'jobs' && (
           <div className="tab-content">
-            <h2>💼 Jobs</h2>
+            <h2>Jobs</h2>
             <p>Coming soon...</p>
           </div>
         )}
@@ -211,7 +151,7 @@ export default function Dashboard({ currentUser }) {
       <footer className="footer">
         <div className="footer-columns">
           <div>
-            <h3>Career<span>Connect</span></h3>
+            <h3>CareerConnect</h3>
             <p>Empowering growth through education and employment integration.</p>
           </div>
           <div>
